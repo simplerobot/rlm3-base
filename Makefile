@@ -1,9 +1,9 @@
 GITHUB_DEPS += simplerobot/build-scripts
 GITHUB_DEPS += simplerobot/logger
 GITHUB_DEPS += simplerobot/test
-GITHUB_DEPS += simplerobot/test-stm32
-GITHUB_DEPS += simplerobot/rlm3-hardware
 GITHUB_DEPS += simplerobot/hw-test-agent
+GITHUB_DEPS += simplerobot/rlm3-hardware
+GITHUB_DEPS += simplerobot/test-stm32
 include ../build-scripts/build/release/include.make
 
 CPU_CC = g++
