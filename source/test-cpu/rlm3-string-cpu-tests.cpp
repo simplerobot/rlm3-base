@@ -259,8 +259,3 @@ TEST_CASE(VFormat_FormatFloat_Range)
 
 	ASSERT(std::strcmp(buffer, "0.e-324 2.225074e-308 2.225074e-308 1.797693e308") == 0);
 }
-
-TEST_CASE(Fail_So_Mcu_Tests_dont_run)
-{
-	ASSERT(false);
-}

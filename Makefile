@@ -1,9 +1,6 @@
 GITHUB_DEPS += simplerobot/build-scripts
 GITHUB_DEPS += simplerobot/logger
 GITHUB_DEPS += simplerobot/test
-GITHUB_DEPS += simplerobot/hw-test-agent
-GITHUB_DEPS += simplerobot/rlm3-hardware
-GITHUB_DEPS += simplerobot/test-stm32
 include ../build-scripts/build/release/include.make
 
 CPU_CC = g++
@@ -49,12 +46,7 @@ CPU_TEST_SOURCE_DIRS = $(MAIN_SOURCE_DIR) $(CPU_TEST_SOURCE_DIR) $(PKG_LOGGER_DI
 CPU_TEST_SOURCE_FILES = $(notdir $(wildcard $(CPU_TEST_SOURCE_DIRS:%=%/*.c) $(CPU_TEST_SOURCE_DIRS:%=%/*.cpp)))
 CPU_TEST_O_FILES = $(addsuffix .o,$(basename $(CPU_TEST_SOURCE_FILES)))
 
-MCU_TEST_SOURCE_DIRS = $(MAIN_SOURCE_DIR) $(MCU_TEST_SOURCE_DIR) $(PKG_RLM3_HARDWARE_DIR) $(PKG_LOGGER_DIR) $(PKG_TEST_STM32_DIR)
-MCU_TEST_SOURCE_FILES = $(notdir $(wildcard $(MCU_TEST_SOURCE_DIRS:%=%/*.c) $(MCU_TEST_SOURCE_DIRS:%=%/*.cpp) $(MCU_TEST_SOURCE_DIRS:%=%/*.s)))
-MCU_TEST_O_FILES = $(addsuffix .o,$(basename $(MCU_TEST_SOURCE_FILES)))
-MCU_TEST_LD_FILE = $(wildcard $(PKG_RLM3_HARDWARE_DIR)/*.ld)
-
-VPATH = $(MCU_TEST_SOURCE_DIRS) $(CPU_TEST_SOURCE_DIRS)
+VPATH = $(CPU_TEST_SOURCE_DIRS)
 
 .PHONY: default all library test-cpu test-mcu release clean
 
@@ -85,32 +77,7 @@ $(CPU_TEST_BUILD_DIR)/%.o : %.c Makefile | $(CPU_TEST_BUILD_DIR)
 $(CPU_TEST_BUILD_DIR) :
 	mkdir -p $@
 
-test-mcu : library test-cpu $(MCU_TEST_BUILD_DIR)/test.bin $(MCU_TEST_BUILD_DIR)/test.hex
-	$(PKG_HW_TEST_AGENT_DIR)/sr-hw-test-agent --run --test-timeout=15 --system-frequency=180m --trace-frequency=2m --board RLM36 --file $(MCU_TEST_BUILD_DIR)/test.bin	
-
-$(MCU_TEST_BUILD_DIR)/test.bin : $(MCU_TEST_BUILD_DIR)/test.elf
-	$(MCU_BN) $< $@
-
-$(MCU_TEST_BUILD_DIR)/test.hex : $(MCU_TEST_BUILD_DIR)/test.elf
-	$(MCU_HX) $< $@
-
-$(MCU_TEST_BUILD_DIR)/test.elf : $(MCU_TEST_O_FILES:%=$(MCU_TEST_BUILD_DIR)/%)
-	$(MCU_CC) $(MCU_CFLAGS) $(MCU_TEST_LD_FILE:%=-T%) -Wl,--gc-sections $^ $(MCU_CLIBS) -s -o $@ -Wl,-Map=$@.map,--cref
-	$(MCU_SZ) $@
-
-$(MCU_TEST_BUILD_DIR)/%.o : %.c Makefile | $(MCU_TEST_BUILD_DIR)
-	$(MCU_CC) -c $(MCU_CFLAGS) $(MCU_INCLUDES) -MMD $< -o $@
-
-$(MCU_TEST_BUILD_DIR)/%.o : %.cpp Makefile | $(MCU_TEST_BUILD_DIR)
-	$(MCU_CC) -c $(MCU_CFLAGS) $(MCU_INCLUDES) -MMD -std=c++11 $< -o $@
-
-$(MCU_TEST_BUILD_DIR)/%.o : %.s Makefile | $(MCU_TEST_BUILD_DIR)
-	$(MCU_AS) -c $(MCU_CFLAGS) -MMD $< -o $@
-
-$(MCU_TEST_BUILD_DIR) :
-	mkdir -p $@
-
-release : test-cpu test-mcu $(LIBRARY_FILES:%=$(RELEASE_DIR)/%)
+release : test-cpu $(LIBRARY_FILES:%=$(RELEASE_DIR)/%)
 
 $(RELEASE_DIR)/% : $(LIBRARY_BUILD_DIR)/% | $(RELEASE_DIR)
 	cp $< $@
@@ -121,6 +88,6 @@ $(RELEASE_DIR) :
 clean:
 	rm -rf $(BUILD_DIR)
 
--include $(wildcard $(CPU_TEST_BUILD_DIR)/*.d $(MCU_TEST_BUILD_DIR)/*.d)
+-include $(wildcard $(CPU_TEST_BUILD_DIR)/*.d)
 
 
