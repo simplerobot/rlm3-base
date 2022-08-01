@@ -27,94 +27,87 @@ static const char* SafePointerHandling(const char* string)
 	return string;
 }
 
-static size_t WriteChar(char* buffer, size_t size, size_t cursor, char c)
+static void WriteChar(RLM3_Format_Fn fn, void* data, char c)
 {
-	if (cursor < size)
-		buffer[cursor] = c;
-	return cursor + 1;
+	fn(data, c);
 }
 
-static size_t WriteString(char* buffer, size_t size, size_t cursor, const char* string)
+static void WriteString(RLM3_Format_Fn fn, void* data, const char* string)
 {
 	for (const char* s = SafePointerHandling(string); *s != 0; s++)
-		cursor = WriteChar(buffer, size, cursor, *s);
-	return cursor;
+		WriteChar(fn, data, *s);
 }
 
-static size_t WriteHexDigit(char* buffer, size_t size, size_t cursor, bool upper, uint32_t x)
+static void WriteHexDigit(RLM3_Format_Fn fn, void* data, bool upper, uint32_t x)
 {
 	char c = '?';
 	if (0 <= x && x <= 9)
 		c = '0' + x;
 	if (10 <= x && x <= 15)
 		c = (upper ? 'A' : 'a') + x - 10;
-	return WriteChar(buffer, size, cursor, c);
+	WriteChar(fn, data, c);
 }
 
-static size_t WriteCharSafe(char* buffer, size_t size, size_t cursor, char c)
+static void WriteCharSafe(RLM3_Format_Fn fn, void* data, char c)
 {
 	if (c == '\\')
 	{
-		cursor = WriteChar(buffer, size, cursor, '\\');
-		cursor = WriteChar(buffer, size, cursor, '\\');
+		WriteChar(fn, data, '\\');
+		WriteChar(fn, data, '\\');
 	}
 	else if (' ' <= c && c <= '~')
 	{
-		cursor = WriteChar(buffer, size, cursor, c);
+		WriteChar(fn, data, c);
 	}
 	else if (c == '\r')
 	{
-		cursor = WriteChar(buffer, size, cursor, '\\');
-		cursor = WriteChar(buffer, size, cursor, 'r');
+		WriteChar(fn, data, '\\');
+		WriteChar(fn, data, 'r');
 	}
 	else if (c == '\n')
 	{
-		cursor = WriteChar(buffer, size, cursor, '\\');
-		cursor = WriteChar(buffer, size, cursor, 'n');
+		WriteChar(fn, data, '\\');
+		WriteChar(fn, data, 'n');
 	}
 	else
 	{
-		cursor = WriteChar(buffer, size, cursor, '\\');
-		cursor = WriteChar(buffer, size, cursor, 'x');
-		cursor = WriteHexDigit(buffer, size, cursor, true, (c >> 4) & 0x0F);
-		cursor = WriteHexDigit(buffer, size, cursor, true, (c >> 0) & 0x0F);
+		WriteChar(fn, data, '\\');
+		WriteChar(fn, data, 'x');
+		WriteHexDigit(fn, data, true, (c >> 4) & 0x0F);
+		WriteHexDigit(fn, data, true, (c >> 0) & 0x0F);
 	}
-	return cursor;
 }
 
-static size_t WriteStringSafe(char* buffer, size_t size, size_t cursor, const char* string)
+static void WriteStringSafe(RLM3_Format_Fn fn, void* data, const char* string)
 {
 	for (const char* s = SafePointerHandling(string); *s != 0; s++)
-		cursor = WriteCharSafe(buffer, size, cursor, *s);
-	return cursor;
+		WriteCharSafe(fn, data, *s);
 }
 
-static size_t WriteUInt(char* buffer, size_t size, size_t cursor, uint32_t value)
+static void WriteUInt(RLM3_Format_Fn fn, void* data, uint32_t value)
 {
 	char buffer_data[10];
 	size_t buffer_size = 0;
 	for (uint32_t x = value; buffer_size == 0 || x > 0; x /= 10)
 		buffer_data[buffer_size++] = '0' + (x % 10);
 	for (size_t i = 0; i < buffer_size; i++)
-		cursor = WriteChar(buffer, size, cursor, buffer_data[buffer_size - i - 1]);
-	return cursor;
+		WriteChar(fn, data, buffer_data[buffer_size - i - 1]);
 }
 
-static size_t WriteInt(char* buffer, size_t size, size_t cursor, int32_t value)
+static void WriteInt(RLM3_Format_Fn fn, void* data, int32_t value)
 {
 	if (value < 0)
-		cursor = WriteChar(buffer, size, cursor, '-');
-	return WriteUInt(buffer, size, cursor, (value < 0) ? -value : value);
+		WriteChar(fn, data, '-');
+	WriteUInt(fn, data, (value < 0) ? -value : value);
 }
 
-static size_t WriteHex(char* buffer, size_t size, size_t cursor, bool upper, uint32_t value)
+static void WriteHex(RLM3_Format_Fn fn, void* data, bool upper, uint32_t value)
 {
 	size_t i = 1;
 	while (i < 8 && (value >> (4 * i)) != 0)
 		i++;
 	for (size_t j = 1; j <= i; j++)
-		cursor = WriteHexDigit(buffer, size, cursor, upper, (value >> (4 * (i - j))) & 0x0F);
-	return cursor;
+		WriteHexDigit(fn, data, upper, (value >> (4 * (i - j))) & 0x0F);
 }
 
 static inline int32_t quick_floor(double value)
@@ -122,20 +115,20 @@ static inline int32_t quick_floor(double value)
 	return (int32_t)value - ((value < 0) ? 1 : 0);
 }
 
-static size_t WriteFloat(char* buffer, size_t size, size_t cursor, double value)
+static void WriteFloat(RLM3_Format_Fn fn, void* data, double value)
 {
 	if (signbit(value))
 	{
 		value = -value;
-		cursor = WriteChar(buffer, size, cursor, '-');
+		WriteChar(fn, data, '-');
 	}
 	int type = fpclassify(value);
 	if (type == FP_NAN)
-		cursor = WriteString(buffer, size, cursor, "nan");
+		WriteString(fn, data, "nan");
 	else if (type == FP_INFINITE)
-		cursor = WriteString(buffer, size, cursor, "inf");
+		WriteString(fn, data, "inf");
 	else if (type == FP_ZERO)
-		cursor = WriteString(buffer, size, cursor, "0.");
+		WriteString(fn, data, "0.");
 	else
 	{
 		static const size_t PRECISION = 6;
@@ -184,57 +177,26 @@ static size_t WriteFloat(char* buffer, size_t size, size_t cursor, double value)
 			}
 			// Write any skipped zeros.
 			for (size_t j = 0; j < skipped_zeros; j++)
-				cursor = WriteChar(buffer, size, cursor, '0');
+				WriteChar(fn, data, '0');
 			skipped_zeros = 0;
 			// Write this digit.
-			cursor = WriteChar(buffer, size, cursor, '0' + digit);
+			WriteChar(fn, data, '0' + digit);
 			// Remove this digit.
 			value -= digit * place;
 			// Display a decimal point.  We do not hide the decimal point, even if we hide the zeros after it.
 			if (i == 0)
-				cursor = WriteChar(buffer, size, cursor, '.');
+				WriteChar(fn, data, '.');
 		}
 		if (exponent != 0)
 		{
-			cursor = WriteChar(buffer, size, cursor, 'e');
-			cursor = WriteInt(buffer, size, cursor, exponent);
+			WriteChar(fn, data, 'e');
+			WriteInt(fn, data, exponent);
 		}
 	}
-	return cursor;
 }
 
-extern size_t RLM3_Format(char* buffer, size_t size, const char* format, ...)
+extern void RLM3_FnFormat(RLM3_Format_Fn fn, void* data, const char* format, va_list args)
 {
-	va_list args;
-	va_start(args, format);
-	size_t cursor = RLM3_VFormat(buffer, size, format, args);
-	va_end(args);
-	return cursor;
-}
-
-extern size_t RLM3_FormatNoNul(char* buffer, size_t size, const char* format, ...)
-{
-	va_list args;
-	va_start(args, format);
-	size_t cursor = RLM3_VFormatNoNul(buffer, size, format, args);
-	va_end(args);
-	return cursor;
-}
-
-extern size_t RLM3_VFormat(char* buffer, size_t size, const char* format, va_list args)
-{
-	size_t cursor = RLM3_VFormatNoNul(buffer, size, format, args);
-
-	cursor = WriteChar(buffer, size, cursor, 0);
-	if (cursor > size && size > 0)
-		buffer[size - 1] = 0;
-
-	return cursor;
-}
-
-extern size_t RLM3_VFormatNoNul(char* buffer, size_t size, const char* format, va_list args)
-{
-	size_t cursor = 0;
 	format = SafePointerHandling(format);
 	while (*format != 0)
 	{
@@ -245,33 +207,88 @@ extern size_t RLM3_VFormatNoNul(char* buffer, size_t size, const char* format, v
 			while ((f >= '0' && f <= '9') || (f == 'z') || (f == 'l') || (f == '.'))
 				f = *(format++);
 			if (f == 's')
-				cursor = WriteStringSafe(buffer, size, cursor, va_arg(args, const char*));
+				WriteStringSafe(fn, data, va_arg(args, const char*));
 			else if (f == 'd')
-				cursor = WriteInt(buffer, size, cursor, va_arg(args, int));
+				WriteInt(fn, data, va_arg(args, int));
 			else if (f == 'f')
-				cursor = WriteFloat(buffer, size, cursor, va_arg(args, double));
+				WriteFloat(fn, data, va_arg(args, double));
 			else if (f == 'u')
-				cursor = WriteUInt(buffer, size, cursor, va_arg(args, unsigned int));
+				WriteUInt(fn, data, va_arg(args, unsigned int));
 			else if (f == 'x')
-				cursor = WriteHex(buffer, size, cursor, false, va_arg(args, unsigned int));
+				WriteHex(fn, data, false, va_arg(args, unsigned int));
 			else if (f == 'X')
-				cursor = WriteHex(buffer, size, cursor, true, va_arg(args, unsigned int));
+				WriteHex(fn, data, true, va_arg(args, unsigned int));
 			else if (f == 'c')
-				cursor = WriteCharSafe(buffer, size, cursor, va_arg(args, int));
+				WriteCharSafe(fn, data, va_arg(args, int));
 			else if (f == '%')
-				cursor = WriteChar(buffer, size, cursor, f);
+				WriteChar(fn, data, f);
 			else
 			{
-				cursor = WriteString(buffer, size, cursor, "[unsupported format ");
-				cursor = WriteCharSafe(buffer, size, cursor, f);
-				cursor = WriteChar(buffer, size, cursor, ']');
+				WriteString(fn, data, "[unsupported format ");
+				WriteCharSafe(fn, data, f);
+				WriteChar(fn, data, ']');
 				break;
 			}
 		}
 		else
 		{
-			cursor = WriteCharSafe(buffer, size, cursor, c);
+			WriteCharSafe(fn, data, c);
 		}
 	}
-	return cursor;
 }
+
+typedef struct FormatBufferData
+{
+	char* buffer;
+	size_t size;
+	size_t cursor;
+} FormatBufferData;
+
+static void FormatBufferFunction(void* raw_data, char c)
+{
+	FormatBufferData* data = (FormatBufferData*)raw_data;
+	if (data->cursor < data->size)
+		data->buffer[data->cursor] = c;
+	data->cursor++;
+}
+
+extern size_t RLM3_Format(char* buffer, size_t size, const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	size_t result = RLM3_VFormat(buffer, size, format, args);
+	va_end(args);
+	return result;
+}
+
+extern size_t RLM3_VFormat(char* buffer, size_t size, const char* format, va_list args)
+{
+	size_t cursor = RLM3_VFormatNoNul(buffer, size, format, args);
+	if (cursor < size)
+		buffer[cursor] = 0;
+	else if (size > 0)
+		buffer[size - 1] = 0;
+	return cursor + 1;
+}
+
+extern size_t RLM3_FormatNoNul(char* buffer, size_t size, const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	size_t result = RLM3_VFormatNoNul(buffer, size, format, args);
+	va_end(args);
+	return result;
+}
+
+extern size_t RLM3_VFormatNoNul(char* buffer, size_t size, const char* format, va_list args)
+{
+	FormatBufferData data = { 0 };
+	data.buffer = buffer;
+	data.size = size;
+	data.cursor = 0;
+
+	RLM3_FnFormat(FormatBufferFunction, &data, format, args);
+
+	return data.cursor;
+}
+
