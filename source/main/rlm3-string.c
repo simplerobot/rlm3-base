@@ -142,7 +142,7 @@ static size_t WriteFloat(char* buffer, size_t size, size_t cursor, double value)
 		int32_t log = quick_floor(log10(value));
 		// Switch to exponential notation for large or small values.
 		int32_t exponent = 0;
-		if (log < -5 || log > 10)
+		if (log < -5 || log > 9)
 		{
 			exponent = log;
 			value *= pow(0.1, exponent);

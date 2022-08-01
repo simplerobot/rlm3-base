@@ -237,9 +237,9 @@ TEST_CASE(VFormat_FormatFloat_Exponents)
 {
 	char buffer[1024];
 
-	RLM3_Format(buffer, sizeof(buffer), "%f %f %f %f", 99999999999.0, 100000000000., 0.000011, 0.00001);
+	RLM3_Format(buffer, sizeof(buffer), "%f %f %f %f", 9999999999.0, 10000000000., 0.000011, 0.00001);
 
-	ASSERT(std::strcmp(buffer, "99999999999. 1.e11 0.000011 1.e-5") == 0);
+	ASSERT(std::strcmp(buffer, "9999999999. 1.e10 0.000011 1.e-5") == 0);
 }
 
 TEST_CASE(VFormat_FormatFloat_Rounding)
@@ -259,7 +259,6 @@ TEST_CASE(VFormat_FormatFloat_Range)
 
 	ASSERT(std::strcmp(buffer, "0.e-324 2.225074e-308 2.225074e-308 1.797693e308") == 0);
 }
-
 
 TEST_CASE(Fail_So_Mcu_Tests_dont_run)
 {
