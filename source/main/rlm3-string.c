@@ -195,7 +195,7 @@ static void WriteFloat(RLM3_Format_Fn fn, void* data, double value)
 	}
 }
 
-extern void RLM3_FnFormat(RLM3_Format_Fn fn, void* data, const char* format, va_list args)
+extern void RLM3_FnVFormat(RLM3_Format_Fn fn, void* data, const char* format, va_list args)
 {
 	format = SafePointerHandling(format);
 	while (*format != 0)
@@ -235,6 +235,14 @@ extern void RLM3_FnFormat(RLM3_Format_Fn fn, void* data, const char* format, va_
 			WriteCharSafe(fn, data, c);
 		}
 	}
+}
+
+extern void RLM3_FnFormat(RLM3_Format_Fn fn, void* data, const char* format, ...)
+{
+	va_list args;
+	va_start(args, format);
+	RLM3_FnFormat(fn, data, format, args);
+	va_end(args);
 }
 
 typedef struct FormatBufferData
@@ -287,7 +295,7 @@ extern size_t RLM3_VFormatNoNul(char* buffer, size_t size, const char* format, v
 	data.size = size;
 	data.cursor = 0;
 
-	RLM3_FnFormat(FormatBufferFunction, &data, format, args);
+	RLM3_FnVFormat(FormatBufferFunction, &data, format, args);
 
 	return data.cursor;
 }
