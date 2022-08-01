@@ -69,8 +69,8 @@ TEST_CASE(VFormat_DirectCharacters_SpecialCharacters)
 
 	size_t size = RLM3_Format(buffer, sizeof(buffer), "Hello World\\\r\n\xD7");
 
-	ASSERT(size == 22);
-	ASSERT(std::strcmp(buffer, "Hello World\\\\\\r\\n\\xD7") == 0);
+	ASSERT(size == 16);
+	ASSERT(std::strcmp(buffer, "Hello World\\\r\n\xD7") == 0);
 }
 
 TEST_CASE(VFormat_FormatCharacter_HappyCase)
@@ -107,15 +107,6 @@ TEST_CASE(VFormat_FormatString_NULL)
 	RLM3_Format(buffer, sizeof(buffer), "%s", g_our_private_null_ptr);
 
 	ASSERT(std::strcmp(buffer, "<NULL>") == 0);
-}
-
-TEST_CASE(VFormat_FormatString_Unaligned)
-{
-	char buffer[1024];
-
-	RLM3_Format(buffer, sizeof(buffer), "%s", (const char*)0x00000001);
-
-	ASSERT(std::strcmp(buffer, "<MISALIGNED>") == 0);
 }
 
 TEST_CASE(VFormat_FormatString_SpecialCharacters)

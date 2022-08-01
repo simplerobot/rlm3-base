@@ -8,12 +8,10 @@
 
 static const char* SafePointerHandling(const char* string)
 {
-	size_t addr = (size_t)string;
 	if (string == NULL)
 		return "<NULL>";
-	if ((addr % 4) != 0)
-		return "<MISALIGNED>";
 #ifdef STM32F427xx
+	size_t addr = (size_t)string;
 	if (
 		(addr < 0x00000000 || addr >= 0x00000000 +    2 * MB) && // Aliased to Flash
 		(addr < 0x08000000 || addr >= 0x08000000 +    2 * MB) && // Flash
@@ -232,7 +230,7 @@ extern void RLM3_FnVFormat(RLM3_Format_Fn fn, void* data, const char* format, va
 		}
 		else
 		{
-			WriteCharSafe(fn, data, c);
+			WriteChar(fn, data, c);
 		}
 	}
 }
