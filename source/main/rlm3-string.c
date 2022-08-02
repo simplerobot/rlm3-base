@@ -239,7 +239,7 @@ extern void RLM3_FnFormat(RLM3_Format_Fn fn, void* data, const char* format, ...
 {
 	va_list args;
 	va_start(args, format);
-	RLM3_FnFormat(fn, data, format, args);
+	RLM3_FnVFormat(fn, data, format, args);
 	va_end(args);
 }
 
